@@ -68,5 +68,4 @@ invoicing-system/
 
 ### 👤 Author
 
-Amauri Franco
-github.com/programadoramauri
+[Amauri Franco](https://github.com/programadoramauri)
