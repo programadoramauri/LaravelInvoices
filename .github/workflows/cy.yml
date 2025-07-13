@@ -1,5 +1,5 @@
 name: Run Laravel Tests
-on: [push]
+on: [push, pull_request]
 
 jobs:
   test:
@@ -31,4 +31,9 @@ jobs:
         run: vendor/bin/phpstan analyse
 
       - name: Run Pest with coverage
-        run: vendor/bin/pest --coverage
+        run: vendor/bin/pest --coverage-clover coverage.xml .
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
