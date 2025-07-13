@@ -1,7 +1,7 @@
 # 📦 Laravel Invoicing System
 
 ![WIP](https://img.shields.io/badge/status-WIP-orange?style=for-the-badge&logo=laravel&logoColor=white)
-[![CI Status](https://github.com/programadoramauri/LaravelInvoices/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/programadoramauri/LaravelInvoices/actions/workflows/ci.yml?query=branch%3Amain)
+[![CI Status](https://github.com/programadoramauri/LaravelInvoices/actions/workflows/cy.yml/badge.svg)
 [![Coverage Status](https://codecov.io/gh/programadoramauri/LaravelInvoices/branch/main/graph/badge.svg)](https://codecov.io/gh/programadoramauri/LaravelInvoices)
 ![PHPStan](https://img.shields.io/badge/phpstan-passing-brightgreen)
 ![Pest](https://img.shields.io/badge/pest-tests--passing-brightgreen)
