@@ -1,23 +1,17 @@
 includes:
-  - ./vendor/larastan/larastan/extension.neon
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
 
 parameters:
-  level: 5
 
-  paths:
-    - app
-    - routes
-    - tests
-    - database/factories
+    paths:
+        - app/
 
-  bootstrapFiles:
-    - tests/TestCase.php
+    # Level 10 is the highest level
+    level: 5
 
-  inferPrivatePropertyTypeFromConstructor: true
-  checkMissingTypehints: true
-  reportUnmatchedIgnoredErrors: false
-
-  # Larastan-specific (ativado automaticamente ao usar a extensão)
-  larastan:
-    analysis:
-      framework: true
+#    ignoreErrors:
+#        - '#PHPDoc tag @var#'
+#
+#    excludePaths:
+#        - ./*/*/FileToBeExcluded.php
