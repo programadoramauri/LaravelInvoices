@@ -12,7 +12,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: mbstring, bcmath, xml, ctype, fileinfo
+          extensions: mbstring, bcmath, xml, ctype, fileinfo, sqlite3, pdo_sqlite
           tools: composer
 
       - name: Copy .env
