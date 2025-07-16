@@ -8,7 +8,7 @@ use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
-it('resets the user password with valid data', function () {
+it('successfully resets the password with valid input', function () {
     $user = User::factory()->create([
         'password' => bcrypt('oldpassword'),
     ]);
@@ -25,8 +25,10 @@ it('resets the user password with valid data', function () {
     $user->refresh();
 
     expect(Hash::check($newPassword, $user->password))->toBeTrue();
+    expect($user->password)->not->toEqual(bcrypt('oldpassword'));
 });
-it('fails to reset password then confirmation does not match', function () {
+
+it('throws when confirmation does not match', function () {
     $user = User::factory()->create([
         'password' => bcrypt('oldpassword'),
     ]);
@@ -36,12 +38,11 @@ it('fails to reset password then confirmation does not match', function () {
         'password_confirmation' => 'WrongConfirmation',
     ];
 
-    $action = new ResetUserPassword;
-
-    expect(fn () => $action->reset($user, $input))
+    expect(fn () => (new ResetUserPassword)->reset($user, $input))
         ->toThrow(ValidationException::class);
 });
-it('fails to reset password if too weak', function () {
+
+it('throws when password is too weak', function () {
     $user = User::factory()->create([
         'password' => bcrypt('oldpassword'),
     ]);
@@ -51,8 +52,51 @@ it('fails to reset password if too weak', function () {
         'password_confirmation' => '123',
     ];
 
-    $action = new ResetUserPassword;
-
-    expect(fn () => $action->reset($user, $input))
+    expect(fn () => (new ResetUserPassword)->reset($user, $input))
         ->toThrow(ValidationException::class);
+});
+
+it('throws when password field is missing', function () {
+    $user = User::factory()->create([
+        'password' => bcrypt('oldpassword'),
+    ]);
+
+    $input = [
+        'password_confirmation' => 'NewStrongPass123!',
+    ];
+
+    expect(fn () => (new ResetUserPassword)->reset($user, $input))
+        ->toThrow(ValidationException::class);
+});
+
+it('throws with various weak password formats', function ($weak) {
+    $user = User::factory()->create([
+        'password' => bcrypt('oldpassword'),
+    ]);
+
+    $input = [
+        'password' => $weak,
+        'password_confirmation' => $weak,
+    ];
+
+    expect(fn () => (new ResetUserPassword)->reset($user, $input))
+        ->toThrow(ValidationException::class);
+})->with([
+    'too short' => ['abc'],
+]);
+
+it('returns validation error fields when password is invalid', function () {
+    $user = User::factory()->create([
+        'password' => bcrypt('oldpassword'),
+    ]);
+
+    try {
+        (new ResetUserPassword)->reset($user, [
+            'password' => 'abc123',
+            'password_confirmation' => 'abc123',
+        ]);
+    } catch (ValidationException $e) {
+        $fields = array_keys($e->errors());
+        expect($fields)->toContain('password');
+    }
 });

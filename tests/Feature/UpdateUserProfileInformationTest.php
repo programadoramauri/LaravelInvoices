@@ -10,7 +10,11 @@ use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
-it('updates user profile information when email does not change', function () {
+beforeEach(function () {
+    $this->action = new UpdateUserProfileInformation;
+});
+
+it('updates name only when email stays the same', function () {
     $user = User::factory()->create([
         'name' => 'Old Name',
         'email' => 'old@example.com',
@@ -21,15 +25,55 @@ it('updates user profile information when email does not change', function () {
         'email' => 'old@example.com',
     ];
 
-    $action = new UpdateUserProfileInformation;
-    $action->update($user, $input);
+    $this->action->update($user, $input);
 
     $user->refresh();
 
     expect($user->name)->toBe('New Name')
         ->and($user->email)->toBe('old@example.com');
 });
-it('updates user profile and resets verification when email change for verified user', function () {
+
+it('resets email_verified_at and sends notification when verified user changes email', function () {
+    Notification::fake();
+
+    // Create a user that implements MustVerifyEmail
+    $user = new class extends User implements MustVerifyEmail
+    {
+        public function getTable()
+        {
+            return 'users';
+        }
+
+        public function sendEmailVerificationNotification()
+        {
+            Notification::send($this, new VerifyEmail);
+        }
+    };
+
+    $user->forceFill([
+        'name' => 'Old Name',
+        'email' => 'old@example.com',
+        'password' => bcrypt('irrelevant'),
+        'email_verified_at' => now(),
+    ])->save();
+
+    $input = [
+        'name' => 'New Name',
+        'email' => 'new@example.com',
+    ];
+
+    $this->action->update($user, $input);
+
+    $user->refresh();
+
+    expect($user->name)->toBe('New Name')
+        ->and($user->email)->toBe('new@example.com')
+        ->and($user->email_verified_at)->toBeNull();
+
+    Notification::assertSentTo($user, VerifyEmail::class);
+});
+
+it('does not send email verification if email is unchanged for verified user', function () {
     Notification::fake();
 
     $user = new class extends User implements MustVerifyEmail
@@ -39,92 +83,60 @@ it('updates user profile and resets verification when email change for verified 
             return 'users';
         }
 
-        public function hasVerifiedEmail()
-        {
-            return true;
-        }
-
         public function sendEmailVerificationNotification()
         {
             Notification::send($this, new VerifyEmail);
-        }
-
-        public function getEmailForVerification()
-        {
-            return $this->email;
         }
     };
 
     $user->forceFill([
         'name' => 'Old Name',
         'email' => 'old@example.com',
-        'password' => fake()->password(8),
+        'password' => bcrypt('irrelevant'),
         'email_verified_at' => now(),
     ])->save();
 
     $input = [
-        'name' => 'New Name',
-        'email' => 'new@example.com',
+        'name' => 'Brand New Name',
+        'email' => 'old@example.com',
     ];
 
-    $this->actingAs($user);
+    $this->action->update($user, $input);
 
-    $action = new UpdateUserProfileInformation;
-    $action->update($user, $input);
-
-    $user->refresh();
-    expect($user->name)->toBe('New Name')
-        ->and($user->email)
-        ->and($user->email_verified_at)->toBeNull();
-
-    Notification::assertSentTo($user, VerifyEmail::class);
+    Notification::assertNothingSent();
 });
 
-it('throws validation error when name is missing', function () {
+it('throws when name is missing', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user);
+    $input = ['email' => 'test@example.com'];
 
-    $input = [
-        'email' => 'test@example.com',
-    ];
-
-    $action = new UpdateUserProfileInformation;
-    expect(fn () => $action->update($user, $input))
+    expect(fn () => $this->action->update($user, $input))
         ->toThrow(ValidationException::class);
 });
 
-it('throws validation error when email is invalid', function () {
+it('throws when email format is invalid', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user);
-
     $input = [
-        'name' => fake()->name(),
-        'email' => 'invalid-email',
+        'name' => 'Valid Name',
+        'email' => 'not-an-email',
     ];
 
-    $action = new UpdateUserProfileInformation;
-    expect(fn () => $action->update($user, $input))
+    expect(fn () => $this->action->update($user, $input))
         ->toThrow(ValidationException::class);
 });
-it('throws validation when email is already taken by another user', function () {
-    $existing = User::factory()->create([
-        'email' => 'taken@example.com',
-    ]);
 
-    $user = User::factory()->create([
-        'email' => 'original@example.com',
-    ]);
+it('throws when email is already taken by another user', function () {
+    User::factory()->create(['email' => 'taken@example.com']);
 
-    $this->actingAs($user);
+    $user = User::factory()->create(['email' => 'me@example.com']);
 
     $input = [
-        'name' => fake()->name(),
+        'name' => 'My Name',
         'email' => 'taken@example.com',
     ];
 
-    $action = new UpdateUserProfileInformation;
-    expect(fn () => $action->update($user, $input))
+    expect(fn () => $this->action->update($user, $input))
         ->toThrow(ValidationException::class);
 });

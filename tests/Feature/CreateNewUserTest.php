@@ -3,29 +3,31 @@
 use App\Actions\Fortify\CreateNewUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    Artisan::call('migrate');
-});
-
-it('creates a new user with valid data', function () {
+it('creates a new user with valid input', function () {
     $action = new CreateNewUser;
-    $password = fake()->password(8);
+
+    $name = fake()->name();
+    $email = fake()->safeEmail();
+    $password = 'SecurePassword1';
+
     $user = $action->create([
-        'name' => fake()->name(),
-        'email' => fake()->safeEmail(),
+        'name' => $name,
+        'email' => $email,
         'password' => $password,
         'password_confirmation' => $password,
     ]);
 
     expect($user)->toBeInstanceOf(User::class);
+    expect(Hash::check($password, $user->password))->toBeTrue();
+    $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => $email, 'name' => $name]);
 });
 
-it('fails if password confirmation does not match', function () {
+it('fails when password confirmation does not match', function () {
     $password = fake()->password(8);
     expect(fn () => (new CreateNewUser)->create([
         'name' => fake()->name(),
@@ -35,16 +37,15 @@ it('fails if password confirmation does not match', function () {
     ]))->toThrow(ValidationException::class);
 });
 
-it('fails if email is already taken', function () {
+it('fails with duplicate email', function () {
     $email = fake()->safeEmail();
-
     User::factory()->create(['email' => $email]);
 
     expect(fn () => (new CreateNewUser)->create([
         'name' => fake()->name(),
         'email' => $email,
-        'password' => 'pass1234',
-        'password_confirmation' => 'pass1234',
+        'password' => 'SecurePassword1',
+        'password_confirmation' => 'SecurePassword1',
     ]))->toThrow(ValidationException::class);
 });
 
@@ -52,30 +53,41 @@ it('fails with invalid email format', function () {
     expect(fn () => (new CreateNewUser)->create([
         'name' => fake()->name(),
         'email' => 'invalid-email',
-        'password' => 'pass1234',
-        'password_confirmation' => 'pass1234',
+        'password' => 'SecurePassword1',
+        'password_confirmation' => 'SecurePassword1',
     ]))->toThrow(ValidationException::class);
 });
 
-it('fails with too short password', function () {
+it('fails when required fields are missing', function () {
+    expect(fn () => (new CreateNewUser)->create([]))
+        ->toThrow(ValidationException::class)
+        ->and(fn (ValidationException $e) => collect($e->errors())->keys()->sort()->all() === ['email', 'name', 'password']
+        );
+});
+
+it('fails with weak passwords', function ($weakPassword) {
     expect(fn () => (new CreateNewUser)->create([
         'name' => fake()->name(),
         'email' => fake()->safeEmail(),
-        'password' => '123',
-        'password_confirmation' => '123',
+        'password' => $weakPassword,
+        'password_confirmation' => $weakPassword,
     ]))->toThrow(ValidationException::class);
-});
+})->with([
+    'too short' => ['123'],
+]);
 
-it('creates user with a long accented name', function () {
-    $name = 'José joão Jeśco Bälièl Apollion Frinkles';
-    $password = 'verysecure123';
+it('creates user with long accented name', function () {
+    $name = 'José João Jeśco Bälièl Apollion Frinkles';
+    $email = fake()->safeEmail();
+    $password = 'SecureAccent123';
 
     $user = (new CreateNewUser)->create([
         'name' => $name,
-        'email' => fake()->safeEmail(),
+        'email' => $email,
         'password' => $password,
         'password_confirmation' => $password,
     ]);
 
     expect($user->name)->toBe($name);
+    $this->assertDatabaseHas('users', ['email' => $email]);
 });
