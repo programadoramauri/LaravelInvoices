@@ -24,7 +24,7 @@ A Laravel-based invoicing system currently under development. This project is fo
 ### 🐳 Run with Docker
 
 ```bash
-git clone https://github.com/programadoramauri/invoicing-system.git
+git clone https://github.com/programadoramauri/LaravelInvoices.git
 cd invoicing-system
 
 # Start containers
@@ -67,7 +67,6 @@ invoicing-system/
 ### 📌 Notes
 
 - Database: MySQL running in Docker (localhost:3306)
-- Redis available via container
 - Mail not configured yet (use log driver for now)
 
 ### 👤 Author
