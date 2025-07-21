@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Http\Middleware\CheckRole;
-use App\Http\Middleware\RedirectIfAuthenticated;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -32,7 +30,5 @@ class RouteServiceProvider extends ServiceProvider
         Route::middleware('web')
             ->group(base_path('routes/web.php'));
 
-        Route::aliasMiddleware('role', CheckRole::class);
-        Route::aliasmiddleware('guest', RedirectIfAuthenticated::class);
     }
 }
